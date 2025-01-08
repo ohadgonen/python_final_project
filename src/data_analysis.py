@@ -1,5 +1,25 @@
 import numpy as np
 import pandas as pd
+import scipy as sp
+import matplotlib.pyplot as plt
+import seaborn as sns
+from collections import Counter
+
+def find_most_frequent_coupled_diagnoses(df, diagnosis_col1, diagnosis_col2):
+    # Create a list of pairs of diagnoses
+    diagnosis_pairs = list(zip(df[diagnosis_col1], df[diagnosis_col2]))
+    
+    # Count the frequency of each diagnosis pair
+    pair_counts = Counter(diagnosis_pairs)
+    
+    # Get the 5 most common pairs
+    most_common_pairs = pair_counts.most_common(5)
+    
+    # Convert the result to a DataFrame for a nice table output
+    most_common_df = pd.DataFrame(most_common_pairs, columns=[f'{diagnosis_col1} & {diagnosis_col2}', 'Frequency'])
+    
+    return most_common_df
+
 
 def evaluate_lobe_activity(df, participant_index, frequency, lobe):
     """
