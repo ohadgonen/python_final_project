@@ -5,13 +5,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 def visualize_non_eeg_data(df):
-    """
-    Provides an overview of the dataset, showing only the first 8 columns of interest,
-    excluding all other columns (e.g., electrode columns).
-    
-    Args:
-        df (pd.DataFrame): The DataFrame to visualize.
-    """
+    # Provides an overview of the dataset, showing only the first 8 columns of interest,excluding all other columns (e.g., electrode columns).
+   
     # Columns to keep (the first 8 columns of interest)
     columns_of_interest = [
         'no.', 'sex', 'age', 'eeg.date', 'education', 'IQ', 'main.disorder', 'specific.disorder'
@@ -21,9 +16,9 @@ def visualize_non_eeg_data(df):
     subset_df = df[columns_of_interest]
     
     # Display concise information about the filtered DataFrame
-    print("\n🔍 Dataset Overview (Columns of Interest Only)")
+    print("\n Dataset Overview (Categorical Columns Only)")
     print("-" * 50)
-    print(f"Dataset shape: {subset_df.shape}\n")
+    print(f"Categorical Data shape: {subset_df.shape}\n")
     
     print("Column Names and Data Types:")
     print(subset_df.dtypes)
@@ -44,8 +39,11 @@ def visualize_eeg_data(df):
     # We'll check for columns that do not match the ones defined in the original function (non-electrode columns)
     electrode_columns = [col for col in df.columns if col not in ['no.', 'sex', 'age', 'eeg.date', 'education', 'IQ', 'main.disorder', 'specific.disorder']]
     
+    print("\n Dataset Overview (EEG Columns Only)")
+    print("-" * 50)
+
     # Get the shape of the DataFrame
-    print(f"EEG Data shape (electrode columns only): {df[electrode_columns].shape}")
+    print(f"EEG Data shape: {df[electrode_columns].shape}")
     
     # Display the first 5 rows of the relevant columns
     print("\nFirst 5 rows (electrode columns only):")
@@ -64,36 +62,3 @@ def visualize_eeg_data(df):
     print(df[electrode_columns].describe())
     # Example usage:
     # visualize_eeg_data(df) 
-
-
-def visualize_correlation(df, cols=None):
-    # If no columns are specified, use all numerical columns
-    if cols is None:
-        cols = df.select_dtypes(include=['float64', 'int64']).columns
-    
-    # Compute the correlation matrix
-    corr_matrix = df[cols].corr()
-
-    # Set plot size
-    plt.figure(figsize=(10, 8))
-    
-    # Plot the heatmap
-    sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt='.2f', linewidths=0.5)
-    
-    # Set title and labels
-    plt.title('Correlation Heatmap', fontsize=14)
-    
-    # Display the plot
-    plt.show()
-
-
-
-
-
-
-
-
-
-     
-
-

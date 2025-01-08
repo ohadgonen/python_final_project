@@ -5,6 +5,8 @@ import pandas as pd
 import scipy as sp
 import matplotlib.pyplot as plt
 import seaborn as sns
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 eeg_file = '/Users/ohadgonen/Desktop/Neuroscience/Year 2/1st semester/Advenced programming in Python/מטלות בית/python_final_project/src/EEG.machinelearing_data_BRMH.csv'  
 df = pd.read_csv(eeg_file)
@@ -55,7 +57,8 @@ check_for_categorical_outliers(cleaned_df)
 # Update the original dataframe, after the cleaning.
 df = cleaned_df
 
-# DATA ANALYSIS
+
+# DATA PROCESSING 
 
 # What are the most frequently coupled diagnoses?
 from src.data_analysis import find_most_frequent_coupled_diagnoses as find_most_frequent_coupled_diagnoses
@@ -63,9 +66,6 @@ from src.data_analysis import find_most_frequent_coupled_diagnoses as find_most_
 most_common_pairs_df = find_most_frequent_coupled_diagnoses(df, 'main.disorder', 'specific.disorder')
 print("\n", most_common_pairs_df)
 
-from src.data_visualization import visualize_correlation as visualize_correlation
-# Visualize correlation for selected columns
-visualize_correlation(df, cols=['education', 'IQ'])
 
 
 
