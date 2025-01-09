@@ -58,13 +58,7 @@ check_for_categorical_outliers(cleaned_df)
 df = cleaned_df
 
 
-# DATA PROCESSING 
 
-# What are the most frequently coupled diagnoses?
-from src.data_analysis import find_most_frequent_coupled_diagnoses as find_most_frequent_coupled_diagnoses
-# Get the most common pairs as a DataFrame
-most_common_pairs_df = find_most_frequent_coupled_diagnoses(df, 'main.disorder', 'specific.disorder')
-print("\n", most_common_pairs_df)
 
 
 
