@@ -3,6 +3,7 @@ import pandas as pd
 import scipy as sp
 import seaborn as sns
 import matplotlib.pyplot as plt
+import mne  
 
 def visualize_non_eeg_data(df):
     # Provides an overview of the dataset, showing only the first 8 columns of interest,excluding all other columns (e.g., electrode columns).
@@ -93,4 +94,33 @@ def visualize_main_psychiatric_disorders(df):
 
     # Show the plot
     plt.show()
+
+
+
+def visualize_eeg_headmap(combined_output, frequency_band='delta'):
+    # Create the standard 10-20 EEG montage
+    montage = mne.channels.make_standard_montage('standard_1020')
+    
+    # Prepare the data: we take only the first frequency band for visualization (e.g., 'delta')
+    eeg_data = combined_output.filter(like=frequency_band).iloc[0].values  # Get the first row for a specific disorder or frequency band
+    
+    # Create an Info object with 32 channels (standard for 10-20 system)
+    # For this, we need the electrode names and the layout (positions of the electrodes).
+    ch_names = [f"{frequency_band}.{electrode}" for electrode in montage.ch_names]  # Use the frequency band as part of the name
+    
+    info = mne.create_info(ch_names=ch_names, ch_types='eeg', sfreq=256)  # Assuming 256 Hz sampling frequency
+    
+    # Set the montage (electrode positions) for the Info object
+    info.set_montage(montage)
+    
+    # Create an Evoked object from the EEG data
+    evoked_data = np.array([eeg_data])  # Make sure to have the data as a 2D array (time x channels)
+    evoked = mne.EvokedArray(evoked_data, info)
+    
+    # Plot the topomap (the head map)
+    evoked.plot_topomap(times='auto', ch_type='eeg', show=True)
+    
+
+
+    
 
