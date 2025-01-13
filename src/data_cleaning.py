@@ -55,7 +55,6 @@ def standardize_categorical_columns(df):
     
     return df
 
-import numpy as np
 
 def check_for_categorical_outliers(df):
     found_outliers = False  # Flag to track if any rare categories are found

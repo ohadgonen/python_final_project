@@ -1,7 +1,10 @@
+import sys
+import os
 import numpy as np
 import pandas as pd
 
 from src.data_cleaning import fill_NaNs as fill_NaNs
+
 def test_fill_NaNs():
 
     # Positive Test Case

@@ -62,3 +62,35 @@ def visualize_eeg_data(df):
     print(df[electrode_columns].describe())
     # Example usage:
     # visualize_eeg_data(df) 
+
+def visualize_main_psychiatric_disorders(df):
+    """
+    Visualizes the frequency of main psychiatric disorders in the dataframe as a bar graph.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame containing the 'main.disorder' column.
+
+    Returns:
+        None
+    """
+    if 'main.disorder' not in df.columns:
+        print("The 'main.disorder' column is not present in the DataFrame.")
+        return
+
+    # Count the occurrences of each main disorder
+    disorder_counts = df['main.disorder'].value_counts()
+
+    # Create the bar plot
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x=disorder_counts.index, y=disorder_counts.values, palette='viridis')
+
+    # Customize the plot
+    plt.title('Frequency of Main Psychiatric Disorders', fontsize=16)
+    plt.xlabel('Main Psychiatric Disorders', fontsize=14)
+    plt.ylabel('Frequency', fontsize=14)
+    plt.xticks(rotation=45, ha='right', fontsize=12)
+    plt.tight_layout()
+
+    # Show the plot
+    plt.show()
+
