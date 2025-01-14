@@ -48,3 +48,80 @@ def compute_mean_by_disorder(dataframe, frequency_bands):
     
     # Return the final DataFrame
     return result
+
+def calculate_band_averages(main_disorder, df):
+    """
+    Calculate the average values for each electrode in specified frequency bands
+    for a given main disorder.
+    
+    Parameters:
+    main_disorder (str): The target main disorder to filter by.
+    df (pd.DataFrame): The EEG data.
+    
+    Returns:
+    dict: A dictionary where keys are frequency bands and values are dictionaries
+          with electrodes as keys and their averages as values.
+    """
+    # Frequency bands and their prefixes
+    frequency_bands = ['delta', 'theta', 'alpha', 'beta', 'gamma', 'highbeta']
+    electrodes = [
+        'FP1', 'FP2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T7', 'C3', 'Cz', 'C4', 'T8',
+        'P7', 'P3', 'Pz', 'P4', 'P8', 'O1', 'O2'
+    ]
+    
+    # Filter the dataframe for the specified main disorder
+    filtered_df = df[df['main.disorder'] == main_disorder]
+    
+    result = {}
+    for band in frequency_bands:
+        # Extract columns matching the band and electrodes
+        band_columns = [col for col in df.columns if col.startswith(band) and any(e in col for e in electrodes)]
+        
+        # Calculate averages for each electrode
+        band_averages = {
+            col.split('.')[-1]: filtered_df[col].mean() for col in band_columns
+        }
+        result[band] = band_averages
+    
+    return result
+
+
+def prepare_disorder_band_averages(dataframe, disorders, frequency_bands, electrodes):
+    """
+    Prepare the required arguments for the `visualize_all_disorders` function from the given dataset.
+
+    Parameters:
+    dataframe (pd.DataFrame): The EEG dataset containing electrode data and disorder labels.
+    disorders (list): List of unique disorders to include (corresponds to `main.disorder` column in the dataset).
+    frequency_bands (list): List of frequency bands to extract (e.g., ["delta", "theta", "alpha", "beta", "gamma", "highbeta"]).
+    electrodes (list): List of electrode names to include (e.g., ["FP1", "FP2", "F3", ..., "O2"]).
+
+    Returns:
+    tuple: A tuple containing:
+           - disorder_band_averages: A list of dictionaries (one for each disorder).
+           - disorder_names: A list of disorder names.
+    """
+    disorder_band_averages = []
+    disorder_names = []
+
+    for disorder in disorders:
+        # Filter the dataset for the specific disorder
+        filtered_df = dataframe[dataframe['main.disorder'] == disorder]
+
+        # Initialize the dictionary for the current disorder
+        band_averages = {}
+        
+        for band in frequency_bands:
+            # Extract the relevant columns for the frequency band
+            band_columns = [f"{band}.{electrode}" for electrode in electrodes if f"{band}.{electrode}" in dataframe.columns]
+            
+            # Calculate the average for each electrode in the band
+            band_averages[band] = {
+                electrode: filtered_df[f"{band}.{electrode}"].mean() for electrode in electrodes if f"{band}.{electrode}" in band_columns
+            }
+        
+        # Append the result
+        disorder_band_averages.append(band_averages)
+        disorder_names.append(disorder)
+
+    return disorder_band_averages, disorder_names

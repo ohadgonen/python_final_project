@@ -95,8 +95,132 @@ def visualize_main_psychiatric_disorders(df):
     # Show the plot
     plt.show()
 
+
+from mne.channels import make_standard_montage
+from mne.viz import plot_topomap
+
+def visualize_brain_activity(band_averages, main_disorder):
+    """
+    Visualize brain activity as topographical head maps for each frequency band.
     
-
-
+    Parameters:
+    band_averages (dict): Dictionary with frequency bands as keys and dictionaries
+                          of electrode averages as values.
+    main_disorder (str): The main disorder being presented.
     
+    Returns:
+    None: Displays the topographical maps as images.
+    """
+    # Frequency bands to visualize
+    frequency_bands = list(band_averages.keys())
+    electrodes = list(band_averages[frequency_bands[0]].keys())
+    
+    # Electrode positions (standard 10-20 EEG system)
+    montage = mne.channels.make_standard_montage('standard_1020')
+    positions = montage.get_positions()['ch_pos']
+    
+    # Convert positions from 3D to 2D
+    pos_2d = {ch: positions[ch][:2] for ch in electrodes if ch in positions}
+    pos_array = np.array(list(pos_2d.values()))
+    
+    # Create a figure with enough spacing between subplots
+    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
+    axes = axes.flatten()
+    
+    for idx, band in enumerate(frequency_bands):
+        # Prepare data for the current band
+        data = np.array([band_averages[band].get(elec, np.nan) for elec in electrodes if elec in pos_2d])
+        vmin, vmax = np.nanmin(data), np.nanmax(data)
+        
+        # Create the topomap with proper arguments
+        im, _ = mne.viz.plot_topomap(
+            data,
+            pos_array,
+            axes=axes[idx],
+            show=False,
+            cmap='viridis',
+            sensors=False,
+            vlim=(vmin, vmax),
+            contours=0,  # Disable contours for a cleaner look
+            outlines="head"  # Adjust outline to ensure proper fit
+        )
+        axes[idx].set_title(f'{band.capitalize()} Band', fontsize=16)
+    
+    # Add a title for the main disorder
+    fig.suptitle(f'Brain Activity for {main_disorder}', fontsize=18, y=0.95)
+    
+    # Adjust the spacing of the plots
+    plt.subplots_adjust(left=0.05, right=0.85, top=0.88, bottom=0.1, wspace=0.4, hspace=0.4)
+    
+    # Add a colorbar to indicate activity strength
+    cbar_ax = fig.add_axes([0.88, 0.2, 0.02, 0.6])  # Position the colorbar on the side
+    cbar = fig.colorbar(im, cax=cbar_ax)
+    cbar.set_label('Activity Strength', fontsize=14)
+    
+    plt.show()
 
+
+def visualize_all_disorders(disorder_band_averages, disorder_names):
+    """
+    Visualize brain activity as topographical head maps for each frequency band across all disorders.
+    
+    Parameters:
+    disorder_band_averages (list): A list of 7 dictionaries, each corresponding to one disorder.
+                                   Each dictionary contains frequency bands as keys and electrode averages as values.
+    disorder_names (list): A list of 7 disorder names corresponding to the dictionaries in `disorder_band_averages`.
+    
+    Returns:
+    None: Displays the topographical maps as images.
+    """
+    # Ensure input sizes match
+    if len(disorder_band_averages) != 7 or len(disorder_names) != 7:
+        raise ValueError("Both `disorder_band_averages` and `disorder_names` must contain 7 elements.")
+    
+    # Get electrode positions (standard 10-20 EEG system)
+    montage = mne.channels.make_standard_montage('standard_1020')
+    positions = montage.get_positions()['ch_pos']
+    
+    # Create a figure for all disorders and frequency bands
+    fig, axes = plt.subplots(7, 6, figsize=(18, 28))
+    fig.subplots_adjust(left=0.05, right=0.85, top=0.95, bottom=0.05, wspace=0.4, hspace=0.3)  
+    
+    for disorder_idx, (band_averages, disorder_name) in enumerate(zip(disorder_band_averages, disorder_names)):
+        frequency_bands = list(band_averages.keys())
+        electrodes = list(band_averages[frequency_bands[0]].keys())
+        
+        # Convert positions from 3D to 2D
+        pos_2d = {ch: positions[ch][:2] for ch in electrodes if ch in positions}
+        pos_array = np.array(list(pos_2d.values()))
+        
+        for band_idx, band in enumerate(frequency_bands):
+            # Prepare data for the current band
+            data = np.array([band_averages[band].get(elec, np.nan) for elec in electrodes if elec in pos_2d])
+            vmin, vmax = np.nanmin(data), np.nanmax(data)
+            
+            # Get the corresponding axis
+            ax = axes[disorder_idx, band_idx]
+            
+            # Create the topomap
+            im, _ = mne.viz.plot_topomap(
+                data,
+                pos_array,
+                axes=ax,
+                show=False,
+                cmap='viridis',
+                sensors=False,
+                vlim=(vmin, vmax),
+                contours=0,
+                outlines="head",
+                size= 250
+            )
+            if disorder_idx == 0:
+                ax.set_title(f'{band.capitalize()} Band', fontsize=14)
+            if band_idx == 0:
+                ax.set_ylabel(disorder_name, fontsize=14)
+    
+    # Add a global colorbar
+    cbar_ax = fig.add_axes([0.88, 0.2, 0.02, 0.6])  # Position the colorbar on the side
+    cbar = fig.colorbar(im, cax=cbar_ax)
+    cbar.set_label('Activity Strength', fontsize=14)
+    
+    plt.show()
