@@ -125,3 +125,68 @@ def prepare_disorder_band_averages(dataframe, disorders, frequency_bands, electr
         disorder_names.append(disorder)
 
     return disorder_band_averages, disorder_names
+
+
+from scipy.stats import ttest_ind
+# Re-import necessary libraries after execution reset
+import pandas as pd
+import numpy as np
+from scipy.stats import ttest_ind
+
+# Define the function with filtering for enhanced or lower activity
+def find_significant_differences(df, disorder_name, healthy_control_name, p_threshold=0.1, activity_type="both"):
+    """
+    Identify electrodes with significant differences in activity between a specific disorder and healthy controls.
+
+    Parameters:
+    df (pd.DataFrame): The full EEG dataset containing disorder and healthy control data.
+    disorder_name (str): The main disorder to compare.
+    healthy_control_name (str): The label for the healthy control group.
+    p_threshold (float): The significance threshold for the t-test (default is 0.1).
+    activity_type (str): "enhanced" for higher activity, "lower" for reduced activity, "both" for all significant differences.
+
+    Returns:
+    dict: A dictionary where keys are frequency bands, and values are lists of electrodes with significant differences.
+    """
+    significant_electrodes = {}
+
+    # Extract healthy control and disorder-specific data
+    disorder_df = df[df["main.disorder"] == disorder_name]
+    healthy_df = df[df["main.disorder"] == healthy_control_name]
+
+    # Ensure that we have data for both groups
+    if disorder_df.empty or healthy_df.empty:
+        print(f"Warning: No data found for {disorder_name} or {healthy_control_name}.")
+        return significant_electrodes
+
+    # Define frequency bands and electrodes
+    frequency_bands = ["delta", "theta", "alpha", "beta", "gamma", "highbeta"]
+    electrodes = ['FP1', 'FP2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T7', 'C3', 'Cz', 'C4', 'T8',
+                  'P7', 'P3', 'Pz', 'P4', 'P8', 'O1', 'O2']
+
+    for band in frequency_bands:
+        significant_electrodes[band] = []
+
+        for electrode in electrodes:
+            column_name = f"{band}.{electrode}"
+
+            if column_name in df.columns:
+                # Extract non-null values for each group
+                disorder_values = disorder_df[column_name].dropna().values
+                healthy_values = healthy_df[column_name].dropna().values
+
+                # Ensure both groups have enough data to compare
+                if len(disorder_values) > 1 and len(healthy_values) > 1:
+                    # Perform independent t-test
+                    t_stat, p_value = ttest_ind(disorder_values, healthy_values, equal_var=False)
+
+                    if p_value < p_threshold:
+                        if activity_type == "enhanced" and disorder_values.mean() > healthy_values.mean():
+                            significant_electrodes[band].append(electrode)
+                        elif activity_type == "lower" and disorder_values.mean() < healthy_values.mean():
+                            significant_electrodes[band].append(electrode)
+                        elif activity_type == "both":
+                            significant_electrodes[band].append(electrode)
+
+    return significant_electrodes
+

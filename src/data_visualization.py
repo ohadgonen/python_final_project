@@ -160,6 +160,10 @@ def visualize_brain_activity(band_averages, main_disorder):
     plt.show()
 
 
+import numpy as np
+import matplotlib.pyplot as plt
+import mne
+
 def visualize_all_disorders(disorder_band_averages, disorder_names):
     """
     Visualize brain activity as topographical head maps for each frequency band across all disorders.
@@ -176,16 +180,18 @@ def visualize_all_disorders(disorder_band_averages, disorder_names):
     if len(disorder_band_averages) != 7 or len(disorder_names) != 7:
         raise ValueError("Both `disorder_band_averages` and `disorder_names` must contain 7 elements.")
     
+    # Define frequency bands in order of decreasing Hz
+    frequency_bands = ["gamma", "highbeta", "beta", "alpha", "theta", "delta"]
+
     # Get electrode positions (standard 10-20 EEG system)
     montage = mne.channels.make_standard_montage('standard_1020')
     positions = montage.get_positions()['ch_pos']
     
     # Create a figure for all disorders and frequency bands
-    fig, axes = plt.subplots(7, 6, figsize=(18, 28))
-    fig.subplots_adjust(left=0.05, right=0.85, top=0.95, bottom=0.05, wspace=0.4, hspace=0.3)  
+    fig, axes = plt.subplots(6, 7, figsize=(24, 18))  # Disorders on x-axis, frequencies on y-axis
+    fig.subplots_adjust(left=0.05, right=0.85, top=0.92, bottom=0.08, wspace=0.6, hspace=0.3)  # Increased spacing
     
     for disorder_idx, (band_averages, disorder_name) in enumerate(zip(disorder_band_averages, disorder_names)):
-        frequency_bands = list(band_averages.keys())
         electrodes = list(band_averages[frequency_bands[0]].keys())
         
         # Convert positions from 3D to 2D
@@ -198,7 +204,7 @@ def visualize_all_disorders(disorder_band_averages, disorder_names):
             vmin, vmax = np.nanmin(data), np.nanmax(data)
             
             # Get the corresponding axis
-            ax = axes[disorder_idx, band_idx]
+            ax = axes[band_idx, disorder_idx]  # Swap indices for horizontal layout
             
             # Create the topomap
             im, _ = mne.viz.plot_topomap(
@@ -210,13 +216,12 @@ def visualize_all_disorders(disorder_band_averages, disorder_names):
                 sensors=False,
                 vlim=(vmin, vmax),
                 contours=0,
-                outlines="head",
-                size= 250
+                outlines="head"
             )
-            if disorder_idx == 0:
-                ax.set_title(f'{band.capitalize()} Band', fontsize=14)
             if band_idx == 0:
-                ax.set_ylabel(disorder_name, fontsize=14)
+                ax.set_title(disorder_name, fontsize=14, pad=20)  # Add padding to space titles more
+            if disorder_idx == 0:
+                ax.set_ylabel(f'{band.capitalize()} Band', fontsize=14)
     
     # Add a global colorbar
     cbar_ax = fig.add_axes([0.88, 0.2, 0.02, 0.6])  # Position the colorbar on the side
