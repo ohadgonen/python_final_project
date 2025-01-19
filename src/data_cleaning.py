@@ -34,16 +34,14 @@ def check_missing_electrode_values(df):
     
     # Check if there are any missing values in the electrode columns
     missing_values = df[electrode_columns].isna().sum()
-    
-    # Print the result
+
+    # Only print if there are missing values
     if missing_values.any():
         print("Missing values in the following electrode columns:")
         print(missing_values[missing_values > 0])
     else:
-        print("No missing values in any of the electrode columns.")
+        print("No missing values found in electrode columns.")
 
-    # Example usage:
-    # check_missing_electrode_values(df)
 
 def standardize_categorical_columns(df):
     # List of columns that are categorical (object type)
@@ -77,11 +75,31 @@ def check_for_categorical_outliers(df):
     if not found_outliers:
         print("\n No rare categories detected in categorical columns.")
 
-    # Example usage:
-    # check_for_categorical_outliers(df)
 
 
 def reformat_electrode_columns(df):
+    new_columns = []
+    for col in df.columns:
+        # Split the column name by period
+        parts = col.split('.')
+        
+        # Check if there are at least 5 parts to ensure it's a valid electrode column
+        if len(parts) >= 5:
+            # Extract the band (third part) and channel (fifth part)
+            band = parts[2]
+            channel = parts[4]
+            # Create the new column name in the format 'band.channel'
+            new_col = f"{band}.{channel}"
+            new_columns.append(new_col)
+        else:
+            new_columns.append(col)  # Keep the column name as it is if it's not a valid electrode column
+    
+    # Update the DataFrame columns with the new names
+    df.columns = new_columns
+    return df
+
+
+def reformat_electrode_columns2(df):
     new_columns = []
     for col in df.columns:
         # Split the column name by period

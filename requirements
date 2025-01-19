@@ -4,3 +4,5 @@ matplotlib.pyplot
 scipy
 seaborn
 mne
+sklearn
+unittest
