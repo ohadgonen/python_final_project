@@ -128,12 +128,7 @@ def prepare_disorder_band_averages(dataframe, disorders, frequency_bands, electr
 
 
 from scipy.stats import ttest_ind
-# Re-import necessary libraries after execution reset
-import pandas as pd
-import numpy as np
-from scipy.stats import ttest_ind
-
-# Define the function with filtering for enhanced or lower activity
+# import necessary libraries 
 def find_significant_differences(df, disorder_name, healthy_control_name, p_threshold=0.1, activity_type="both"):
     """
     Identify electrodes with significant differences in activity between a specific disorder and healthy controls.
@@ -189,4 +184,68 @@ def find_significant_differences(df, disorder_name, healthy_control_name, p_thre
                             significant_electrodes[band].append(electrode)
 
     return significant_electrodes
+ 
+   
+def find_strong_long_range_correlations(df, num_pairs=5, threshold=0.7):
+    """
+    Identifies the top strongest long-range EEG correlations in the dataset,
+    ensuring that only truly distant electrodes are considered.
 
+    Args:
+        df (pd.DataFrame): Cleaned EEG dataset.
+        num_pairs (int): Number of strongest distant electrode pairs to return.
+        threshold (float): Minimum absolute correlation value to consider.
+
+    Returns:
+        pd.DataFrame: DataFrame containing the top long-range electrode correlations.
+    """
+
+    # Define EEG electrode regions
+    region_map = {
+        "FP1": "Frontal", "FP2": "Frontal",
+        "F3": "Frontal", "Fz": "Frontal", "F4": "Frontal",
+        "C3": "Central", "Cz": "Central", "C4": "Central",
+        "P3": "Parietal", "Pz": "Parietal", "P4": "Parietal",
+        "O1": "Occipital", "Oz": "Occipital", "O2": "Occipital",
+        "T3": "Temporal", "T4": "Temporal", "T5": "Temporal", "T6": "Temporal"
+    }
+
+    # Extract only EEG columns (exclude non-numeric and non-EEG data)
+    eeg_columns = [col for col in df.columns if "." in col and df[col].dtype in ["float64", "int64"]]
+    eeg_df = df[eeg_columns]
+
+    # Compute correlations for EEG features only
+    eeg_corr = eeg_df.corr(method="spearman")
+
+    # Filter out weak correlations (keep only |correlation| > threshold)
+    strong_corr = eeg_corr.abs().unstack()
+    strong_corr = strong_corr[(strong_corr >= threshold) & (strong_corr < 1)]  # Remove self-correlations
+
+    # Find long-range correlations (electrodes from different and **truly distant** brain regions)
+    long_range_corrs = []
+
+    for (feature1, feature2), corr_value in strong_corr.items():
+        try:
+            elec1, elec2 = feature1.split(".")[1], feature2.split(".")[1]  # Extract electrode names
+            
+            # Identify brain regions
+            region1 = region_map.get(elec1, "Unknown")
+            region2 = region_map.get(elec2, "Unknown")
+
+            # Ensure electrodes are from **different and truly distant** brain regions
+            distant_regions = [
+                ("Frontal", "Occipital"),
+                ("Frontal", "Temporal"),
+                ("Central", "Occipital"),
+                ("Temporal", "Parietal"),
+                ("Temporal", "Occipital")
+            ]
+
+            if (region1, region2) in distant_regions or (region2, region1) in distant_regions:
+                long_range_corrs.append((feature1, feature2, corr_value))
+        except IndexError:
+            continue  # Skip any columns that don't match the expected format
+
+    # Convert to DataFrame and select top N correlations
+    long_range_corr_df = pd.DataFrame(long_range_corrs, columns=["Feature 1", "Feature 2", "Correlation"])
+    return long_range_corr_df.sort_values(by="Correlation", ascending=False).head(num_pairs)

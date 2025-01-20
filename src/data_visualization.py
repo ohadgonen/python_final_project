@@ -3,9 +3,12 @@ import pandas as pd
 import scipy as sp
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 import mne  
+import networkx as nx
 
 def visualize_non_eeg_data(df):
+
     # Provides an overview of the dataset, showing only the first 8 columns of interest,excluding all other columns (e.g., electrode columns).
    
     # Columns to keep (the first 8 columns of interest)
@@ -36,6 +39,7 @@ def visualize_non_eeg_data(df):
 
 
 def visualize_eeg_data(df):
+
     # Extract only the electrode columns (assuming they follow a certain pattern)
     # We'll check for columns that do not match the ones defined in the original function (non-electrode columns)
     electrode_columns = [col for col in df.columns if col not in ['no.', 'sex', 'age', 'eeg.date', 'education', 'IQ', 'main.disorder', 'specific.disorder']]
@@ -160,9 +164,6 @@ def visualize_brain_activity(band_averages, main_disorder):
     plt.show()
 
 
-import numpy as np
-import matplotlib.pyplot as plt
-import mne
 
 def visualize_all_disorders(disorder_band_averages, disorder_names):
     """
@@ -228,4 +229,116 @@ def visualize_all_disorders(disorder_band_averages, disorder_names):
     cbar = fig.colorbar(im, cax=cbar_ax)
     cbar.set_label('Activity Strength', fontsize=14)
     
+    plt.show()
+
+
+
+def visualize_long_range_correlations(corr_df):
+    """
+    Visualizes the strongest correlations between distant EEG electrodes using a network graph.
+
+    Args:
+        corr_df (pd.DataFrame): Output DataFrame from `find_strong_long_range_correlations` function.
+    """
+    # Create a network graph object
+    G = nx.Graph()
+
+    # Add nodes and edges with correlation strength as edge weight
+    for _, row in corr_df.iterrows():
+        elec1, elec2, corr_value = row["Feature 1"].split(".")[1], row["Feature 2"].split(".")[1], row["Correlation"]
+        G.add_edge(elec1, elec2, weight=corr_value)
+
+    # Generate node positions using a spring layout for better visualization
+    plt.figure(figsize=(8, 6))
+    pos = nx.spring_layout(G, seed=42)  
+
+    # Draw the network graph
+    nx.draw(G, pos, with_labels=True, node_color="skyblue", edge_color="gray", node_size=1200, font_size=10)
+    
+    # Draw edges with varying width based on correlation strength
+    edge_weights = [G[u][v]["weight"] * 5 for u, v in G.edges()]
+    nx.draw_networkx_edges(G, pos, width=edge_weights, edge_color="red")
+
+    plt.title("Strongest Long-Range EEG Electrode Correlations")
+    plt.show()
+
+
+
+def visualize_brain_mapped_electrode_correlation_gradient(df, threshold=0.5):
+    """
+    Visualizes the correlation network of all EEG electrodes using a brain-mapped layout,
+    with gradient colors representing correlation strength.
+
+    - Electrodes are positioned based on actual brain regions.
+    - Line thickness and color represent correlation strength.
+    - A gradient color scale is used for correlation values.
+
+    Args:
+        df (pd.DataFrame): Cleaned EEG dataset.
+        threshold (float): Minimum absolute correlation value to visualize an edge.
+    """
+    # Define approximate brain-mapped positions for EEG electrodes
+    electrode_positions = {
+        "FP1": (-1, 2), "FP2": (1, 2),  # Frontal
+        "F3": (-1, 1.5), "Fz": (0, 1.5), "F4": (1, 1.5),  # Frontal
+        "C3": (-1, 1), "Cz": (0, 1), "C4": (1, 1),  # Central
+        "P3": (-1, 0.5), "Pz": (0, 0.5), "P4": (1, 0.5),  # Parietal
+        "O1": (-1, 0), "Oz": (0, 0), "O2": (1, 0),  # Occipital
+        "T3": (-2, 1), "T4": (2, 1), "T5": (-2, 0.5), "T6": (2, 0.5)  # Temporal
+    }
+
+    # Extract only EEG columns (exclude non-numeric and non-EEG data)
+    eeg_columns = [col for col in df.columns if "." in col and df[col].dtype in ["float64", "int64"]]
+    eeg_df = df[eeg_columns]
+
+    # Compute correlations for EEG features only
+    eeg_corr = eeg_df.corr(method="spearman")
+    
+    # Filter out weak correlations (keep only |correlation| > threshold)
+    strong_corr = eeg_corr.abs().unstack()
+    strong_corr = strong_corr[(strong_corr >= threshold) & (strong_corr < 1)]  # Remove self-correlations
+
+    # Create a graph object
+    G = nx.Graph()
+
+    # Store edge attributes (weights and colors)
+    edge_weights = []
+    edge_colors = []
+
+    for (feature1, feature2), corr_value in strong_corr.items():
+        try:
+            elec1, elec2 = feature1.split(".")[1], feature2.split(".")[1]  # Extract electrode names
+            if elec1 in electrode_positions and elec2 in electrode_positions:
+                G.add_edge(elec1, elec2, weight=corr_value)
+                edge_weights.append(corr_value * 5)  # Scale thickness
+                edge_colors.append(corr_value)  # Store correlation for color mapping
+        except IndexError:
+            continue  # Skip any columns that don't match the expected format
+
+    # Define node positions based on approximate brain locations
+    pos = {node: electrode_positions[node] for node in G.nodes()}
+
+    # Create colormap for edge colors
+    cmap = plt.cm.plasma  # Gradient from dark purple (low) to yellow (high)
+    norm = mcolors.Normalize(vmin=threshold, vmax=1)  # Normalize for color scale
+
+    # Create figure and axis for colorbar
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    # Draw nodes
+    nx.draw(G, pos, ax=ax, with_labels=True, node_color="lightblue", node_size=1200, font_size=10)
+
+    # Convert edge colors into RGBA values using the colormap
+    edge_colors_rgba = [cmap(norm(c)) for c in edge_colors]
+
+    # Draw edges with varying thickness and color
+    nx.draw_networkx_edges(G, pos, ax=ax, edge_color=edge_colors_rgba, width=edge_weights)
+
+    # Create a separate axis for the colorbar
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])  # Dummy array for colorbar
+    cbar = fig.colorbar(sm, ax=ax, fraction=0.046, pad=0.04)
+    cbar.set_label("EEG Electrode Correlation Strength (Spearman)", fontsize=12)
+
+    plt.title(f"Brain-Mapped EEG Electrode Correlation Network (|ρ| > {threshold:.2f})")
     plt.show()

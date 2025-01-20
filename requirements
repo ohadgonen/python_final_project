@@ -6,3 +6,4 @@ seaborn
 mne
 sklearn
 unittest
+networkx
