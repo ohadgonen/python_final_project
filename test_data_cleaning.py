@@ -9,7 +9,7 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
-from data_cleaning import fill_NaNs
+from src.data_cleaning import fill_NaNs
 
 def test_fill_NanNs():
     # Positive Test Case: Verifies that NaNs are filled with the average value
@@ -74,7 +74,7 @@ def test_fill_NanNs():
 test_fill_NanNs()
 
 
-from data_cleaning import check_missing_electrode_values
+from src.data_cleaning import check_missing_electrode_values
 
 def test_check_missing_electrode_values():
     try:
@@ -143,7 +143,7 @@ def test_check_missing_electrode_values():
 test_check_missing_electrode_values()
 
 
-from data_cleaning import standardize_categorical_columns
+from src.data_cleaning import standardize_categorical_columns
 
 def test_standardize_categorical_columns():
     try:
@@ -215,7 +215,7 @@ def test_standardize_categorical_columns():
 test_standardize_categorical_columns()
 
 
-from data_cleaning import check_for_categorical_outliers
+from src.data_cleaning import check_for_categorical_outliers
 
 def test_check_for_categorical_outliers():
     try:
@@ -274,7 +274,7 @@ test_check_for_categorical_outliers()
 
 
 
-from data_cleaning import reformat_electrode_columns
+from src.data_cleaning import reformat_electrode_columns
 
 def test_reformat_electrode_columns():
     try:

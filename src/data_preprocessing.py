@@ -2,6 +2,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.preprocessing import LabelEncoder
+from imblearn.over_sampling import SMOTE
 
 
 def preprocess_data(df):
@@ -21,6 +22,7 @@ def preprocess_data(df):
 
     return df, label_encoders
 
+
 def split_data(df):
     """
     Splits the dataset into training and test sets.
@@ -31,12 +33,15 @@ def split_data(df):
     
     return train_test_split(X, y, test_size=0.2, random_state=42)
 
+    return X_train, X_test, y_train, y_test
+
 def train_model(X_train, y_train):
     """
     Trains a Random Forest model on the given training data.
     Returns the trained model.
     """
-    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    # Class weighting to handle imbalance.
+    model = RandomForestClassifier(n_estimators=1000,class_weight="balanced_subsample", random_state=42)
     model.fit(X_train, y_train)
     return model
 

@@ -19,71 +19,69 @@ def data_exploration(df):
 
 from src.data_cleaning import reformat_electrode_columns
 
-def compute_mean_by_disorder(dataframe, frequency_bands):
-    # Ensure the electrode columns are reformatted using the provided function
-    dataframe = reformat_electrode_columns(dataframe)
-    
-    # Get all electrode names (assuming they follow the format 'band.channel')
-    electrodes = sorted(set([col.split('.')[-1] for col in dataframe.columns if '.' in col]))
-
-    # Create a list of columns for each frequency band and electrode, ensuring correct column names
-    result_columns = [f"{band}.{electrode}" for band in frequency_bands for electrode in electrodes]
-
-    # Initialize a DataFrame to store the results with the correct columns
-    result = pd.DataFrame(columns=result_columns)
-
-    # Iterate over all the main disorders to compute the mean for each frequency band and each electrode
-    for disorder in dataframe['main.disorder'].dropna().unique():  # Handle NaN values
-        row_values = {}
-        
-        # Compute the mean values for each frequency band and each electrode
-        for electrode in electrodes:
-            for band in frequency_bands:
-                electrode_band = f"{band}.{electrode}"
-                band_data = [col for col in dataframe.columns if electrode in col and band in col]
-                row_values[electrode_band] = dataframe[dataframe['main.disorder'] == disorder][band_data].mean().mean()
-
-        # Add the computed values for this disorder to the result DataFrame
-        result.loc[disorder] = row_values
-    
-    # Return the final DataFrame
-    return result
-
 def calculate_band_averages(main_disorder, df):
     """
     Calculate the average values for each electrode in specified frequency bands
     for a given main disorder.
-    
+
     Parameters:
     main_disorder (str): The target main disorder to filter by.
     df (pd.DataFrame): The EEG data.
-    
+
     Returns:
     dict: A dictionary where keys are frequency bands and values are dictionaries
           with electrodes as keys and their averages as values.
     """
+    # Ensure df is valid
+    if not isinstance(df, pd.DataFrame) or df.empty:
+        return {}
+
+    # Ensure "main.disorder" column exists
+    if "main.disorder" not in df.columns:
+        return {}
+
+    # Ensure main_disorder exists in df
+    if main_disorder not in df["main.disorder"].dropna().unique():
+        return {}
+
     # Frequency bands and their prefixes
     frequency_bands = ['delta', 'theta', 'alpha', 'beta', 'gamma', 'highbeta']
     electrodes = [
         'FP1', 'FP2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T7', 'C3', 'Cz', 'C4', 'T8',
         'P7', 'P3', 'Pz', 'P4', 'P8', 'O1', 'O2'
     ]
+
+    # Filter the dataframe for the specified disorder
+    filtered_df = df[df['main.disorder'] == main_disorder].copy()
+
+    # If no valid rows remain after filtering, return an empty dictionary
+    if filtered_df.empty:
+        return {}
+
+    # Check for non-numeric values in EEG data **before processing**
+    eeg_columns = [col for col in df.columns if any(col.startswith(band) for band in frequency_bands)]
     
-    # Filter the dataframe for the specified main disorder
-    filtered_df = df[df['main.disorder'] == main_disorder]
-    
+    if any(filtered_df[col].apply(lambda x: isinstance(x, str) or pd.isna(pd.to_numeric(x, errors='coerce'))).any() for col in eeg_columns):
+        return {}  # If any column has non-numeric values, return {}
+
     result = {}
+
     for band in frequency_bands:
-        # Extract columns matching the band and electrodes
         band_columns = [col for col in df.columns if col.startswith(band) and any(e in col for e in electrodes)]
-        
-        # Calculate averages for each electrode
-        band_averages = {
-            col.split('.')[-1]: filtered_df[col].mean() for col in band_columns
-        }
-        result[band] = band_averages
-    
-    return result
+        band_averages = {}
+
+        for col in band_columns:
+            if col in filtered_df:
+                filtered_df[col] = pd.to_numeric(filtered_df[col], errors='coerce')
+                valid_values = filtered_df[col].dropna()
+
+                if not valid_values.empty:
+                    band_averages[col.split('.')[-1]] = valid_values.mean()
+
+        if band_averages:  
+            result[band] = band_averages
+
+    return result if result else {}  # If no valid EEG data remains, return {}
 
 
 def prepare_disorder_band_averages(dataframe, disorders, frequency_bands, electrodes):
@@ -101,34 +99,55 @@ def prepare_disorder_band_averages(dataframe, disorders, frequency_bands, electr
            - disorder_band_averages: A list of dictionaries (one for each disorder).
            - disorder_names: A list of disorder names.
     """
+    # Handle null/invalid input (Fixes Null Test)
+    if not isinstance(dataframe, pd.DataFrame) or dataframe.empty:
+        return ([], [])
+
+    # Ensure "main.disorder" column exists
+    if "main.disorder" not in dataframe.columns:
+        return ([], [])
+
+    # Ensure EEG columns are numeric (Fixes Error Test)
+    eeg_columns = [col for col in dataframe.columns if "." in col]
+    dataframe[eeg_columns] = dataframe[eeg_columns].apply(pd.to_numeric, errors="coerce")
+
     disorder_band_averages = []
     disorder_names = []
 
     for disorder in disorders:
-        # Filter the dataset for the specific disorder
-        filtered_df = dataframe[dataframe['main.disorder'] == disorder]
+        # Ensure the disorder exists in the DataFrame (Fixes Negative Test)
+        if disorder not in dataframe["main.disorder"].dropna().unique():
+            continue
 
-        # Initialize the dictionary for the current disorder
+        # Filter the dataset for the specific disorder
+        filtered_df = dataframe[dataframe["main.disorder"] == disorder]
+
+        # Skip disorders that have no valid rows left after filtering
+        if filtered_df.empty:
+            continue
+
         band_averages = {}
         
         for band in frequency_bands:
             # Extract the relevant columns for the frequency band
             band_columns = [f"{band}.{electrode}" for electrode in electrodes if f"{band}.{electrode}" in dataframe.columns]
-            
-            # Calculate the average for each electrode in the band
+
+            # Compute mean values while handling NaNs correctly
             band_averages[band] = {
-                electrode: filtered_df[f"{band}.{electrode}"].mean() for electrode in electrodes if f"{band}.{electrode}" in band_columns
+                electrode: filtered_df[f"{band}.{electrode}"].mean(skipna=True)
+                for electrode in electrodes if f"{band}.{electrode}" in band_columns
             }
-        
-        # Append the result
-        disorder_band_averages.append(band_averages)
-        disorder_names.append(disorder)
 
-    return disorder_band_averages, disorder_names
+        # Append the result only if it contains valid data
+        if any(band_averages.values()):  
+            disorder_band_averages.append(band_averages)
+            disorder_names.append(disorder)
 
+    # Ensure function returns `([], [])` when no valid data exists (Fixes Negative Test)
+    return (disorder_band_averages, disorder_names) if disorder_band_averages else ([], [])
 
 from scipy.stats import ttest_ind
-# import necessary libraries 
+
 def find_significant_differences(df, disorder_name, healthy_control_name, p_threshold=0.1, activity_type="both"):
     """
     Identify electrodes with significant differences in activity between a specific disorder and healthy controls.
@@ -142,17 +161,36 @@ def find_significant_differences(df, disorder_name, healthy_control_name, p_thre
 
     Returns:
     dict: A dictionary where keys are frequency bands, and values are lists of electrodes with significant differences.
+          Returns {} if no significant differences are found.
     """
-    significant_electrodes = {}
+    # Ensure df is valid
+    if not isinstance(df, pd.DataFrame) or df.empty:
+        return {}
+
+    # Ensure "main.disorder" exists in df
+    if "main.disorder" not in df.columns:
+        return {}
+
+    # Ensure both disorder and healthy control exist
+    unique_disorders = df["main.disorder"].dropna().unique()
+    if disorder_name not in unique_disorders or healthy_control_name not in unique_disorders:
+        return {}
 
     # Extract healthy control and disorder-specific data
-    disorder_df = df[df["main.disorder"] == disorder_name]
-    healthy_df = df[df["main.disorder"] == healthy_control_name]
+    disorder_df = df[df["main.disorder"] == disorder_name].copy()
+    healthy_df = df[df["main.disorder"] == healthy_control_name].copy()
 
-    # Ensure that we have data for both groups
-    if disorder_df.empty or healthy_df.empty:
-        print(f"Warning: No data found for {disorder_name} or {healthy_control_name}.")
-        return significant_electrodes
+    # Convert all EEG data to numeric
+    eeg_columns = [col for col in df.columns if "." in col]
+    disorder_df[eeg_columns] = disorder_df[eeg_columns].apply(pd.to_numeric, errors="coerce")
+    healthy_df[eeg_columns] = healthy_df[eeg_columns].apply(pd.to_numeric, errors="coerce")
+
+    # If there are no valid numeric values after conversion, return {}
+    if disorder_df[eeg_columns].isna().all().all() or healthy_df[eeg_columns].isna().all().all():
+        return {}
+
+    significant_electrodes = {}
+    found_significant = False  # Track if any significant difference is found
 
     # Define frequency bands and electrodes
     frequency_bands = ["delta", "theta", "alpha", "beta", "gamma", "highbeta"]
@@ -164,17 +202,14 @@ def find_significant_differences(df, disorder_name, healthy_control_name, p_thre
 
         for electrode in electrodes:
             column_name = f"{band}.{electrode}"
-
             if column_name in df.columns:
                 # Extract non-null values for each group
                 disorder_values = disorder_df[column_name].dropna().values
                 healthy_values = healthy_df[column_name].dropna().values
 
-                # Ensure both groups have enough data to compare
+                # Ensure both groups have enough valid data for statistical testing
                 if len(disorder_values) > 1 and len(healthy_values) > 1:
-                    # Perform independent t-test
                     t_stat, p_value = ttest_ind(disorder_values, healthy_values, equal_var=False)
-
                     if p_value < p_threshold:
                         if activity_type == "enhanced" and disorder_values.mean() > healthy_values.mean():
                             significant_electrodes[band].append(electrode)
@@ -182,9 +217,13 @@ def find_significant_differences(df, disorder_name, healthy_control_name, p_thre
                             significant_electrodes[band].append(electrode)
                         elif activity_type == "both":
                             significant_electrodes[band].append(electrode)
+        
+        # Check if this band has significant results
+        if significant_electrodes[band]:
+            found_significant = True
 
-    return significant_electrodes
- 
+    # If no significant differences were found, return {}
+    return significant_electrodes if found_significant else {}
    
 def find_strong_long_range_correlations(df, num_pairs=5, threshold=0.7):
     """
