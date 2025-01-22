@@ -99,29 +99,6 @@ def reformat_electrode_columns(df):
     return df
 
 
-def reformat_electrode_columns2(df):
-    new_columns = []
-    for col in df.columns:
-        # Split the column name by period
-        parts = col.split('.')
-        
-        # Check if there are at least 5 parts to ensure it's a valid electrode column
-        if len(parts) >= 5:
-            # Extract the band (third part) and channel (fifth part)
-            band = parts[2]
-            channel = parts[4]
-            # Create the new column name in the format 'band.channel'
-            new_col = f"{band}.{channel}"
-            new_columns.append(new_col)
-        else:
-            new_columns.append(col)  # Keep the column name as it is if it's not a valid electrode column
-    
-    # Update the DataFrame columns with the new names
-    df.columns = new_columns
-    return df
-
-
-
 
 
 
