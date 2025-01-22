@@ -82,9 +82,72 @@ def calculate_band_averages(main_disorder, df):
             result[band] = band_averages
 
     return result if result else {}  # If no valid EEG data remains, return {}
-
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
 def prepare_disorder_band_averages(dataframe, disorders, frequency_bands, electrodes):
+    """
+    Prepare the required arguments for the visualize_all_disorders function from the given dataset.
+
+    Parameters:
+    dataframe (pd.DataFrame): The EEG dataset containing electrode data and disorder labels.
+    disorders (list): List of unique disorders to include (corresponds to main.disorder column in the dataset).
+    frequency_bands (list): List of frequency bands to extract (e.g., ["delta", "theta", "alpha", "beta", "gamma", "highbeta"]).
+    electrodes (list): List of electrode names to include (e.g., ["FP1", "FP2", "F3", ..., "O2"]).
+
+    Returns:
+    tuple: A tuple containing:
+           - disorder_band_averages: A list of dictionaries (one for each disorder).
+           - disorder_names: A list of disorder names.
+    """
+    if not isinstance(dataframe, pd.DataFrame):
+        raise ValueError("Input must be a pandas DataFrame.")
+    
+    if dataframe.empty or 'main.disorder' not in dataframe.columns:
+        return [], []
+    
+    disorder_band_averages = []
+    disorder_names = []
+
+    for disorder in disorders:
+        # Filter the dataset for the specific disorder
+        filtered_df = dataframe[dataframe['main.disorder'] == disorder]
+        
+        if filtered_df.empty:
+            continue
+
+        # Initialize the dictionary for the current disorder
+        band_averages = {}
+        
+        for band in frequency_bands:
+            # Extract the relevant columns for the frequency band
+            band_columns = [f"{band}.{electrode}" for electrode in electrodes if f"{band}.{electrode}" in dataframe.columns]
+            
+            if not band_columns:
+                continue
+            
+            # Ensure numeric conversion and handle invalid values
+            filtered_band_df = filtered_df[band_columns].apply(pd.to_numeric, errors='coerce')
+            
+            # Drop completely NaN rows to avoid empty means
+            if filtered_band_df.dropna().empty:
+                continue
+            
+            # Calculate the average for each electrode in the band
+            band_averages[band] = {
+                electrode: filtered_band_df[f"{band}.{electrode}"].mean(skipna=True) 
+                for electrode in electrodes if f"{band}.{electrode}" in band_columns
+            }
+        
+        # Append only if meaningful data exists
+        if band_averages:
+            disorder_band_averages.append(band_averages)
+            disorder_names.append(disorder)
+    
+    return disorder_band_averages, disorder_names
+
+def prepare_disorder_band_averages_real(dataframe, disorders, frequency_bands, electrodes):
     """
     Prepare the required arguments for the visualize_all_disorders function from the given dataset.
 

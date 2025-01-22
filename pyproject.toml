@@ -2,7 +2,7 @@
 name = "eeg-psychiatric-descriptions"
 version = "0.1.0"
 description = "A programming project analyzing EEG data for psychiatric disorder classification."
-authors = ["Ohad Gonen, Ora Friedman <ohadgonen0@gmail.com>"]
+authors = ["Ohad Gonen, Ora Friedman <ohadgonen0@gmail.com> <oranechama@gmail.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]

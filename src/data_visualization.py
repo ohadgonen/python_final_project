@@ -65,8 +65,9 @@ def visualize_eeg_data(df):
     # Display descriptive statistics for the electrode columns
     print("\nDescriptive Statistics (electrode columns only):")
     print(df[electrode_columns].describe())
-    # Example usage:
-    # visualize_eeg_data(df) 
+    
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 def visualize_main_psychiatric_disorders(df):
     """
@@ -79,11 +80,18 @@ def visualize_main_psychiatric_disorders(df):
         None
     """
     if 'main.disorder' not in df.columns:
-        print("The 'main.disorder' column is not present in the DataFrame.")
-        return
+        raise ValueError("The 'main.disorder' column is not present in the DataFrame.")
+
+    if df['main.disorder'].isnull().all():
+        raise ValueError("The 'main.disorder' column contains only NaN values.")
 
     # Count the occurrences of each main disorder
     disorder_counts = df['main.disorder'].value_counts()
+
+    # Ensure there is data to plot
+    if disorder_counts.empty:
+        print("No data available to plot.")
+        return
 
     # Create the bar plot
     plt.figure(figsize=(10, 6))
@@ -106,18 +114,27 @@ from mne.viz import plot_topomap
 def visualize_brain_activity(band_averages, main_disorder):
     """
     Visualize brain activity as topographical head maps for each frequency band.
-    
-    Parameters:
-    band_averages (dict): Dictionary with frequency bands as keys and dictionaries
-                          of electrode averages as values.
-    main_disorder (str): The main disorder being presented.
-    
-    Returns:
-    None: Displays the topographical maps as images.
     """
+    if not isinstance(band_averages, dict) or not band_averages:
+        raise ValueError("band_averages must be a non-empty dictionary.")
+    
+    # Remove None values and filter out empty frequency bands
+    band_averages = {
+        band: {k: v for k, v in values.items() if v is not None}
+        for band, values in band_averages.items()
+    }
+    
+    # Ensure at least one valid frequency band remains
+    band_averages = {band: values for band, values in band_averages.items() if values}
+    if not band_averages:
+        raise ValueError("All frequency bands contain only None values or are empty.")
+    
     # Frequency bands to visualize
     frequency_bands = list(band_averages.keys())
-    electrodes = list(band_averages[frequency_bands[0]].keys())
+    electrodes = list(next(iter(band_averages.values())).keys())
+    
+    if not electrodes:
+        raise ValueError("No valid electrodes found in band_averages.")
     
     # Electrode positions (standard 10-20 EEG system)
     montage = mne.channels.make_standard_montage('standard_1020')
@@ -127,13 +144,21 @@ def visualize_brain_activity(band_averages, main_disorder):
     pos_2d = {ch: positions[ch][:2] for ch in electrodes if ch in positions}
     pos_array = np.array(list(pos_2d.values()))
     
+    if pos_array.size == 0:
+        raise ValueError("No valid electrode positions found for the given data.")
+    
     # Create a figure with enough spacing between subplots
     fig, axes = plt.subplots(2, 3, figsize=(18, 10))
     axes = axes.flatten()
     
     for idx, band in enumerate(frequency_bands):
+        if band not in band_averages or not band_averages[band]:
+            continue
+        
         # Prepare data for the current band
         data = np.array([band_averages[band].get(elec, np.nan) for elec in electrodes if elec in pos_2d])
+        if data.size == 0:
+            continue
         vmin, vmax = np.nanmin(data), np.nanmax(data)
         
         # Create the topomap with proper arguments
@@ -158,13 +183,12 @@ def visualize_brain_activity(band_averages, main_disorder):
     
     # Add a colorbar to indicate activity strength
     cbar_ax = fig.add_axes([0.88, 0.2, 0.02, 0.6])  # Position the colorbar on the side
-    cbar = fig.colorbar(im, cax=cbar_ax)
-    cbar.set_label('Activity Strength', fontsize=14)
+    if 'im' in locals():
+        cbar = fig.colorbar(im, cax=cbar_ax)
+        cbar.set_label('Activity Strength', fontsize=14)
     
     plt.show()
-
-
-
+    
 def visualize_all_disorders(disorder_band_averages, disorder_names):
     """
     Visualize brain activity as topographical head maps for each frequency band across all disorders.
@@ -264,47 +288,54 @@ def visualize_long_range_correlations(corr_df):
 
 
 
-def visualize_brain_mapped_electrode_correlation_gradient(df, threshold=0.5):
+def visualize_correlation_gradient(df, threshold=0.5):
     """
     Visualizes the correlation network of all EEG electrodes using a brain-mapped layout,
     with gradient colors representing correlation strength.
-
-    - Electrodes are positioned based on actual brain regions.
-    - Line thickness and color represent correlation strength.
-    - A gradient color scale is used for correlation values.
-
-    Args:
-        df (pd.DataFrame): Cleaned EEG dataset.
-        threshold (float): Minimum absolute correlation value to visualize an edge.
     """
-    # Define approximate brain-mapped positions for EEG electrodes
-    electrode_positions = {
-        "FP1": (-1, 2), "FP2": (1, 2),  # Frontal
-        "F3": (-1, 1.5), "Fz": (0, 1.5), "F4": (1, 1.5),  # Frontal
-        "C3": (-1, 1), "Cz": (0, 1), "C4": (1, 1),  # Central
-        "P3": (-1, 0.5), "Pz": (0, 0.5), "P4": (1, 0.5),  # Parietal
-        "O1": (-1, 0), "Oz": (0, 0), "O2": (1, 0),  # Occipital
-        "T3": (-2, 1), "T4": (2, 1), "T5": (-2, 0.5), "T6": (2, 0.5)  # Temporal
-    }
-
+    if not isinstance(df, pd.DataFrame):
+        raise ValueError("Input must be a pandas DataFrame.")
+    
+    if df.empty:
+        raise ValueError("Input DataFrame is empty.")
+    
     # Extract only EEG columns (exclude non-numeric and non-EEG data)
     eeg_columns = [col for col in df.columns if "." in col and df[col].dtype in ["float64", "int64"]]
-    eeg_df = df[eeg_columns]
-
+    if not eeg_columns:
+        raise ValueError("No valid EEG columns found in the DataFrame.")
+    
+    eeg_df = df[eeg_columns].copy()
+    
+    # Ensure no columns are completely NaN
+    eeg_df.dropna(axis=1, how='all', inplace=True)
+    if eeg_df.empty:
+        raise ValueError("All EEG columns contain only NaN values.")
+    
     # Compute correlations for EEG features only
     eeg_corr = eeg_df.corr(method="spearman")
     
     # Filter out weak correlations (keep only |correlation| > threshold)
     strong_corr = eeg_corr.abs().unstack()
     strong_corr = strong_corr[(strong_corr >= threshold) & (strong_corr < 1)]  # Remove self-correlations
-
+    
+    if strong_corr.empty:
+        raise ValueError("No strong correlations found above the given threshold.")
+    
+    # Define approximate brain-mapped positions for EEG electrodes
+    electrode_positions = {
+        "FP1": (-1, 2), "FP2": (1, 2),
+        "F3": (-1, 1.5), "Fz": (0, 1.5), "F4": (1, 1.5),
+        "C3": (-1, 1), "Cz": (0, 1), "C4": (1, 1),
+        "P3": (-1, 0.5), "Pz": (0, 0.5), "P4": (1, 0.5),
+        "O1": (-1, 0), "Oz": (0, 0), "O2": (1, 0),
+        "T3": (-2, 1), "T4": (2, 1), "T5": (-2, 0.5), "T6": (2, 0.5)
+    }
+    
     # Create a graph object
     G = nx.Graph()
-
-    # Store edge attributes (weights and colors)
     edge_weights = []
     edge_colors = []
-
+    
     for (feature1, feature2), corr_value in strong_corr.items():
         try:
             elec1, elec2 = feature1.split(".")[1], feature2.split(".")[1]  # Extract electrode names
@@ -313,44 +344,199 @@ def visualize_brain_mapped_electrode_correlation_gradient(df, threshold=0.5):
                 edge_weights.append(corr_value * 5)  # Scale thickness
                 edge_colors.append(corr_value)  # Store correlation for color mapping
         except IndexError:
-            continue  # Skip any columns that don't match the expected format
-
+            continue
+    
+    if G.number_of_edges() == 0:
+        raise ValueError("No valid electrode correlations to visualize.")
+    
     # Define node positions based on approximate brain locations
     pos = {node: electrode_positions[node] for node in G.nodes()}
-
+    
     # Create colormap for edge colors
-    cmap = plt.cm.plasma  # Gradient from dark purple (low) to yellow (high)
-    norm = mcolors.Normalize(vmin=threshold, vmax=1)  # Normalize for color scale
-
+    cmap = plt.cm.plasma
+    norm = mcolors.Normalize(vmin=threshold, vmax=1)
+    
     # Create figure and axis for colorbar
     fig, ax = plt.subplots(figsize=(10, 8))
-
+    
     # Draw nodes
     nx.draw(G, pos, ax=ax, with_labels=True, node_color="lightblue", node_size=1200, font_size=10)
-
+    
     # Convert edge colors into RGBA values using the colormap
     edge_colors_rgba = [cmap(norm(c)) for c in edge_colors]
-
+    
     # Draw edges with varying thickness and color
     nx.draw_networkx_edges(G, pos, ax=ax, edge_color=edge_colors_rgba, width=edge_weights)
-
+    
     # Create a separate axis for the colorbar
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-    sm.set_array([])  # Dummy array for colorbar
+    sm.set_array([])
     cbar = fig.colorbar(sm, ax=ax, fraction=0.046, pad=0.04)
     cbar.set_label("EEG Electrode Correlation Strength (Spearman)", fontsize=12)
-
+    
     plt.title(f"Brain-Mapped EEG Electrode Correlation Network (|ρ| > {threshold:.2f})")
     plt.show()
-
-
-import matplotlib.pyplot as plt
+    
 import pandas as pd
-
+import numpy as np
+import networkx as nx
 import matplotlib.pyplot as plt
-import pandas as pd
+import matplotlib.colors as mcolors
 
+def visualize_correlation_gradient_by_disorders(df, disorder1, disorder2, threshold=0.5):
+    """
+    Visualizes the correlation network of EEG electrodes for two specified main.disorders,
+    displaying them side by side.
+
+    Args:
+        df (pd.DataFrame): Cleaned EEG dataset.
+        disorder1 (str): The first main disorder to filter by.
+        disorder2 (str): The second main disorder to filter by.
+        threshold (float): Minimum absolute correlation value to visualize an edge.
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise ValueError("Input must be a pandas DataFrame.")
+    
+    if 'main.disorder' not in df.columns:
+        raise ValueError("The DataFrame must contain a 'main.disorder' column.")
+    
+    eeg_columns = [col for col in df.columns if '.' in col and df[col].dtype in ['float64', 'int64']]
+    if not eeg_columns:
+        raise ValueError("No valid EEG columns found in the DataFrame.")
+    
+    if df[eeg_columns].isna().all().all():
+        raise ValueError("All EEG columns contain only NaN values.")
+    
+    def compute_graph(df, disorder):
+        disorder_df = df[df['main.disorder'] == disorder]
+        if disorder_df.empty:
+            return None, None, None, None
+        
+        eeg_df = disorder_df[eeg_columns]
+        eeg_corr = eeg_df.corr(method="spearman")
+        
+        strong_corr = eeg_corr.abs().unstack()
+        strong_corr = strong_corr[(strong_corr >= threshold) & (strong_corr < 1)]
+        
+        if strong_corr.empty:
+            return None, None, None, None
+        
+        G = nx.Graph()
+        edge_weights = []
+        edge_colors = []
+        
+        electrode_positions = {
+            "FP1": (-1, 2), "FP2": (1, 2),
+            "F3": (-1, 1.5), "Fz": (0, 1.5), "F4": (1, 1.5),
+            "C3": (-1, 1), "Cz": (0, 1), "C4": (1, 1),
+            "P3": (-1, 0.5), "Pz": (0, 0.5), "P4": (1, 0.5),
+            "O1": (-1, 0), "Oz": (0, 0), "O2": (1, 0),
+            "T3": (-2, 1), "T4": (2, 1), "T5": (-2, 0.5), "T6": (2, 0.5)
+        }
+
+        for (feature1, feature2), corr_value in strong_corr.items():
+            try:
+                elec1, elec2 = feature1.split(".")[1], feature2.split(".")[1]
+                if elec1 in electrode_positions and elec2 in electrode_positions:
+                    G.add_edge(elec1, elec2, weight=corr_value)
+                    edge_weights.append(corr_value * 5)
+                    edge_colors.append(corr_value)
+            except IndexError:
+                continue
+        
+        pos = {node: electrode_positions[node] for node in G.nodes()}
+        return G, pos, edge_weights, edge_colors
+    
+    G1, pos1, edge_weights1, edge_colors1 = compute_graph(df, disorder1)
+    G2, pos2, edge_weights2, edge_colors2 = compute_graph(df, disorder2)
+    
+    if G1 is None or G2 is None:
+        raise ValueError("One or both disorders have no valid correlation data to visualize.")
+    
+    fig, axes = plt.subplots(1, 2, figsize=(18, 8))
+    cmap = plt.cm.plasma
+    norm = mcolors.Normalize(vmin=threshold, vmax=1)
+
+    for ax, G, pos, edge_weights, edge_colors, title in zip(
+        axes, [G1, G2], [pos1, pos2], [edge_weights1, edge_weights2], [edge_colors1, edge_colors2],
+        [disorder1, disorder2]
+    ):
+        nx.draw(G, pos, ax=ax, with_labels=True, node_color="lightblue", node_size=1200, font_size=10)
+        edge_colors_rgba = [cmap(norm(c)) for c in edge_colors]
+        nx.draw_networkx_edges(G, pos, ax=ax, edge_color=edge_colors_rgba, width=edge_weights)
+        ax.set_title(f"EEG Correlation Map: {title}")
+    
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=axes, fraction=0.046, pad=0.04)
+    cbar.set_label("EEG Electrode Correlation Strength (Spearman)", fontsize=12)
+    plt.show()
 def plot_brain_activity_by_disorder(df, main_disorder):
+    """
+    Plots average brain activity for all frequency bands for specific disorders within a main disorder.
+
+    Args:
+        df (pd.DataFrame): The dataset.
+        main_disorder (str): The main disorder to filter by.
+
+    Returns:
+        None: Displays a single figure with subplots for all frequency bands.
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise ValueError("Input must be a pandas DataFrame.")
+    
+    if 'main.disorder' not in df.columns or 'specific.disorder' not in df.columns:
+        raise ValueError("The DataFrame must contain 'main.disorder' and 'specific.disorder' columns.")
+    
+    valid_bands = ["delta", "theta", "alpha", "beta", "gamma", "highbeta"]
+    band_columns = [col for col in df.columns if any(col.startswith(band) for band in valid_bands)]
+    
+    if not band_columns:
+        raise ValueError("No valid EEG frequency band columns found in the DataFrame.")
+    
+    if df[band_columns].isna().all().all():
+        raise ValueError("All EEG frequency band columns contain only NaN values.")
+    
+    fig, axes = plt.subplots(3, 2, figsize=(15, 18))
+    axes = axes.flatten()
+    
+    filtered_df = df[df['main.disorder'] == main_disorder]
+    if filtered_df.empty:
+        raise ValueError(f"No data found for main disorder: {main_disorder}")
+    
+    for i, frequency_band in enumerate(valid_bands):
+        ax = axes[i]
+        band_columns = [col for col in df.columns if col.startswith(frequency_band)]
+        
+        if not band_columns:
+            ax.set_visible(False)
+            continue
+        
+        mean_activity = (
+            filtered_df.groupby('specific.disorder')[band_columns]
+            .mean()
+            .mean(axis=1)
+            .sort_values(ascending=False)
+        )
+        
+        if mean_activity.empty:
+            ax.set_visible(False)
+            continue
+        
+        mean_activity.plot(kind='bar', color='skyblue', edgecolor='black', ax=ax)
+        ax.set_title(f"{frequency_band.capitalize()} Activity")
+        ax.set_xlabel("Specific Disorder")
+        ax.set_ylabel("Average Activity")
+        ax.tick_params(axis='x', rotation=45)
+    
+    for j in range(len(valid_bands), len(axes)):
+        axes[j].set_visible(False)
+    
+    plt.suptitle(f"Brain Activity by Frequency Band (Main Disorder: {main_disorder})", fontsize=16)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
+
+def plot_brain_activity_by_disorder_real(df, main_disorder):
     """
     Plots average brain activity for all frequency bands for specific disorders within a main disorder.
 
