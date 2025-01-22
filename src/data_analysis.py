@@ -147,45 +147,6 @@ def prepare_disorder_band_averages(dataframe, disorders, frequency_bands, electr
     
     return disorder_band_averages, disorder_names
 
-def prepare_disorder_band_averages_real(dataframe, disorders, frequency_bands, electrodes):
-    """
-    Prepare the required arguments for the visualize_all_disorders function from the given dataset.
-
-    Parameters:
-    dataframe (pd.DataFrame): The EEG dataset containing electrode data and disorder labels.
-    disorders (list): List of unique disorders to include (corresponds to main.disorder column in the dataset).
-    frequency_bands (list): List of frequency bands to extract (e.g., ["delta", "theta", "alpha", "beta", "gamma", "highbeta"]).
-    electrodes (list): List of electrode names to include (e.g., ["FP1", "FP2", "F3", ..., "O2"]).
-
-    Returns:
-    tuple: A tuple containing:
-           - disorder_band_averages: A list of dictionaries (one for each disorder).
-           - disorder_names: A list of disorder names.
-    """
-    disorder_band_averages = []
-    disorder_names = []
-
-    for disorder in disorders:
-        # Filter the dataset for the specific disorder
-        filtered_df = dataframe[dataframe['main.disorder'] == disorder]
-
-        # Initialize the dictionary for the current disorder
-        band_averages = {}
-        
-        for band in frequency_bands:
-            # Extract the relevant columns for the frequency band
-            band_columns = [f"{band}.{electrode}" for electrode in electrodes if f"{band}.{electrode}" in dataframe.columns]
-            
-            # Calculate the average for each electrode in the band
-            band_averages[band] = {
-                electrode: filtered_df[f"{band}.{electrode}"].mean() for electrode in electrodes if f"{band}.{electrode}" in band_columns
-            }
-        
-        # Append the result
-        disorder_band_averages.append(band_averages)
-        disorder_names.append(disorder)
-
-    return disorder_band_averages, disorder_names
 
 from scipy.stats import ttest_ind
 
