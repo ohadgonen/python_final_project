@@ -95,8 +95,8 @@ def visualize_main_psychiatric_disorders(df):
 
     # Create the bar plot
     plt.figure(figsize=(10, 6))
-    sns.barplot(x=disorder_counts.index, y=disorder_counts.values, palette='viridis')
-
+    sns.barplot(x=disorder_counts.index, y=disorder_counts.values, hue=disorder_counts.index, palette='viridis', legend=False)
+    
     # Customize the plot
     plt.title('Frequency of Main Psychiatric Disorders', fontsize=16)
     plt.xlabel('Main Psychiatric Disorders', fontsize=14)

@@ -21,7 +21,7 @@ def fill_NaNs(df, column_name):
         mean_value = df[column_name].mean()
         
         # Fill NaN values in the column with the mean value
-        df[column_name].fillna(mean_value, inplace=True)
+        df[column_name] = df[column_name].fillna(mean_value)
     else:
         print(f"Column '{column_name}' not found in the DataFrame.")
     
