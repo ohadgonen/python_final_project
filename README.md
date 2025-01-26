@@ -4,15 +4,6 @@
 
 This project analyzes EEG data for psychiatric disorder classification. It includes data processing, visualization, and machine learning models to classify different psychiatric disorders based on EEG signals.
 
-## Table of Contents
-
-- [Installation](#installation)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [Dependencies](#dependencies)
-- [Authors](#authors)
-- [License](#license)
-
 ## Installation
 
 1. Clone the repository:
@@ -58,4 +49,3 @@ seaborn==0.12.2
 mne==1.2.2
 networkx==3.0
 imbalanced-learn==0.10.1
-unittest
