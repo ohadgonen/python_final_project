@@ -3,7 +3,6 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import accuracy_score, classification_report
-from imblearn.over_sampling import SMOTE
 
 from src.model import preprocess_data, split_data, train_model, evaluate_model  
 
