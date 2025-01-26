@@ -4,7 +4,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import accuracy_score, classification_report
 from imblearn.over_sampling import SMOTE
-from src.data_preprocessing import preprocess_data, split_data, train_model, evaluate_model  # Update import path as needed
+
+from src.model import preprocess_data, split_data, train_model, evaluate_model  
 
 def get_sample_dataframe():
     """Creates a small sample EEG dataset for testing."""
