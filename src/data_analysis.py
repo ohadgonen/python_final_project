@@ -82,9 +82,7 @@ def calculate_band_averages(main_disorder, df):
             result[band] = band_averages
 
     return result if result else {}  # If no valid EEG data remains, return {}
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
+
 
 def prepare_disorder_band_averages(dataframe, disorders, frequency_bands, electrodes):
     """
