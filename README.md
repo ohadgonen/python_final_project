@@ -7,7 +7,9 @@ This project analyzes EEG data for psychiatric disorder classification. It inclu
 
 ## Data source
 
-the data set was founcd in kaggle, under the name 'EEG Psychiatric Disorders Dataset'.
+the data set was found in kaggle, under the name 'EEG Psychiatric Disorders Dataset'.
+
+
 Link : https://www.kaggle.com/datasets/shashwatwork/eeg-psychiatric-disorders-dataset?select=EEG.machinelearing_data_BRMH.csv
 
 ## Testing 
@@ -17,17 +19,22 @@ This project uses pytest for testing.
 pytest installation: 
 
 Before running tests, ensure pytest is installed. You can install it using:
+
 pip install pytest
 
 If you’re using a virtual environment (.venv), activate it first:
+
 source .venv/bin/activate  # On macOS/Linux
+
 .\.venv\Scripts\activate   # On Windows (PowerShell)
 
 Then install pytest:
+
 pip install pytest
 
 Running tests: 
 to run each test module, simply write pytest test_module.py
+
 for example: pytest test_data_analysis.py
 
 ## Installation
@@ -54,13 +61,6 @@ for example: pytest test_data_analysis.py
 1. Prepare your EEG data and ensure it follows the required format.
 2. Run the Jupyter Notebook `main.ipynb` to perform data analysis and visualization.
 3. Use the provided functions in `src/data_visualization.py` to visualize average electrode activity for specific disorders.
-
-Example usage in a Jupyter Notebook:
-```python
-from src.data_visualization import visualize_average_activity
-
-# Assuming eeg_data is already created
-visualize_average_activity(eeg_data, 'addictive disorder')
 
 
 # Dependencies
