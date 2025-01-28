@@ -2,7 +2,33 @@
 
 ## Description
 
-This project analyzes EEG data for psychiatric disorder classification. It includes data processing, visualization, and machine learning models to classify different psychiatric disorders based on EEG signals.
+This project analyzes EEG data for psychiatric disorder classification. It includes data processing, visualization, and a machine learning model to classify different psychiatric disorders based on EEG signals.
+
+
+## Data source
+
+the data set was founcd in kaggle, under the name 'EEG Psychiatric Disorders Dataset'.
+Link : https://www.kaggle.com/datasets/shashwatwork/eeg-psychiatric-disorders-dataset?select=EEG.machinelearing_data_BRMH.csv
+
+## Testing 
+
+This project uses pytest for testing.
+
+pytest installation: 
+
+Before running tests, ensure pytest is installed. You can install it using:
+pip install pytest
+
+If you’re using a virtual environment (.venv), activate it first:
+source .venv/bin/activate  # On macOS/Linux
+.\.venv\Scripts\activate   # On Windows (PowerShell)
+
+Then install pytest:
+pip install pytest
+
+Running tests: 
+to run each test module, simply write pytest test_module.py
+for example: pytest test_data_analysis.py
 
 ## Installation
 
