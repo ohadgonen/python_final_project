@@ -19,23 +19,29 @@ This project uses pytest for testing.
 pytest installation: 
 
 Before running tests, ensure pytest is installed. You can install it using:
-
+```sh
 pip install pytest
-
+```
 If you’re using a virtual environment (.venv), activate it first:
-
+```sh
 source .venv/bin/activate  # On macOS/Linux
-
+```
+```sh
 .\.venv\Scripts\activate   # On Windows (PowerShell)
+```
 
 Then install pytest:
-
+```sh
 pip install pytest
+```
 
 Running tests: 
 to run each test module, simply write pytest test_module.py
 
-for example: pytest test_data_analysis.py
+for example:
+```sh
+pytest test_data_analysis.py
+```
 
 ## Installation
 
