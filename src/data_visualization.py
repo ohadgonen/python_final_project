@@ -377,11 +377,6 @@ def visualize_correlation_gradient(df, threshold=0.5):
     plt.title(f"Brain-Mapped EEG Electrode Correlation Network (|ρ| > {threshold:.2f})")
     plt.show()
     
-import pandas as pd
-import numpy as np
-import networkx as nx
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
 
 def visualize_correlation_gradient_by_disorders(df, disorder1, disorder2, threshold=0.5):
     """
@@ -471,6 +466,8 @@ def visualize_correlation_gradient_by_disorders(df, disorder1, disorder2, thresh
     cbar = fig.colorbar(sm, ax=axes, fraction=0.046, pad=0.04)
     cbar.set_label("EEG Electrode Correlation Strength (Spearman)", fontsize=12)
     plt.show()
+
+
 def plot_brain_activity_by_disorder(df, main_disorder):
     """
     Plots average brain activity for all frequency bands for specific disorders within a main disorder.
@@ -535,4 +532,3 @@ def plot_brain_activity_by_disorder(df, main_disorder):
     plt.suptitle(f"Brain Activity by Frequency Band (Main Disorder: {main_disorder})", fontsize=16)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
-
