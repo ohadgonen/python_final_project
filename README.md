@@ -34,7 +34,7 @@ Link : https://www.kaggle.com/datasets/shashwatwork/eeg-psychiatric-disorders-da
 ## Usage
 
 1. Prepare your EEG data and ensure it follows the required format.
-2. Run the Jupyter Notebook `main.ipynb` to perform data analysis and visualization.
+2. Run the Jupyter Notebook `main.ipynb` and follow the pipeline to perform data analysis and visualization.
 3. Use the provided functions in `src/data_visualization.py` to visualize average electrode activity for specific disorders.
 
 ## Testing 
